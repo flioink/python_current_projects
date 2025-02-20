@@ -5,9 +5,9 @@ from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QLabel,\
                              QListWidget, QFileDialog, QSlider, QVBoxLayout, QHBoxLayout, QMessageBox
 from PyQt6.QtCore import Qt, QUrl, QTimer
 from PyQt6.QtMultimedia import  QMediaPlayer, QAudioOutput
-
 import json
 
+# fix renumber on deleted item
 
 # app class
 class AudioApp(QWidget):
@@ -47,7 +47,7 @@ class AudioApp(QWidget):
         self.title = QLabel("Flioink Audio Player")
         self.title.setObjectName("title")
 
-        self.btn_opener = QPushButton("Choose a folder")
+
 
         # Play Buttons
         self.btn_play = QPushButton("Play▶️")
@@ -75,7 +75,7 @@ class AudioApp(QWidget):
         self.btn_pause.setDisabled(True)
         self.btn_reset.setDisabled(True)
 
-        # add to layout top
+        # add to button layout top
         self.playback_buttons_layout_top.addWidget(self.btn_play)
         self.playback_buttons_layout_top.addWidget(self.btn_pause)
         self.playback_buttons_layout_top.addWidget(self.btn_reset)
@@ -84,7 +84,7 @@ class AudioApp(QWidget):
         self.playback_buttons_layout_top.setSpacing(5)  # Reduce space between buttons
         self.playback_buttons_layout_top.setContentsMargins(0, 0, 0, 0)  # Remove extra margins
 
-        # add to layout bottom
+        # add to button layout bottom
         self.playback_buttons_layout_bottom.addWidget(self.btn_previous)
         self.playback_buttons_layout_bottom.addWidget(self.btn_next)
         self.playback_buttons_layout_bottom.addWidget(self.btn_loop)
@@ -94,8 +94,19 @@ class AudioApp(QWidget):
         self.playback_buttons_layout_bottom.setContentsMargins(0, 0, 0, 0)  # Remove extra margins
 
         # playlist buttons
+        self.btn_opener = QPushButton("Open a folder")
+        self.btn_file = QPushButton("Open a file")
+        self.load_playlist_layout = QHBoxLayout()
+        self.load_playlist_layout.addWidget(self.btn_opener)
+        self.load_playlist_layout.addWidget(self.btn_file)
+
+
         self.btn_save = QPushButton("Save Playlist")
         self.btn_load = QPushButton("Load Playlist")
+        self.save_and_load_layout = QHBoxLayout()
+        self.save_and_load_layout.addWidget(self.btn_save)
+        self.save_and_load_layout.addWidget(self.btn_load)
+
         self.btn_clear = QPushButton("Clear Playlist")
 
         # speed label
@@ -166,15 +177,15 @@ class AudioApp(QWidget):
 
         # playlist
         col1.addWidget(self.file_list)
-        # adding the buttons
 
+        # adding the layouts
         col2.addLayout(self.playback_buttons_layout_top)
         col2.addLayout(self.playback_buttons_layout_bottom)
-        col2.addWidget(self.btn_opener)
-        col2.addWidget(self.btn_save)
-        col2.addWidget(self.btn_load)
-        col2.addWidget(self.btn_clear)
+        col2.addLayout(self.load_playlist_layout)
+        col2.addLayout(self.save_and_load_layout)
 
+        col2.addWidget(self.btn_clear)
+        # spacing the columns
         row.addLayout(col1, 4)
         row.addLayout(col2, 2)
 
@@ -194,7 +205,8 @@ class AudioApp(QWidget):
     def event_handler(self):
         # buttons
         self.speed_slider.valueChanged.connect(self.update_slider)
-        self.btn_opener.clicked.connect(self.open_file)
+        self.btn_opener.clicked.connect(self.open_directory)
+        self.btn_file.clicked.connect(self.open_file)
         self.btn_play.clicked.connect(self.play_audio)
         self.btn_pause.clicked.connect(self.pause_audio)
         self.btn_reset.clicked.connect(self.reset_audio)
@@ -226,14 +238,21 @@ class AudioApp(QWidget):
         self.btn_load.clicked.connect(self.load_custom_playlist)
 
 
-
-
     def update_slider(self):
         speed = self.speed_slider.value()
         self.slider_text.setText(f"Speed: {speed}%")
 
     def open_file(self):
-        path = QFileDialog.getExistingDirectory(self, "Select Folder")
+
+        file, _ = QFileDialog.getOpenFileName(self, "Select File", filter="Audio Files (*.mp3)")
+        if file:
+            self.file_list.clear()
+            self.playlist = [file]
+            self.file_list.addItem(os.path.basename(file))
+
+
+    def open_directory(self):
+        path = QFileDialog.getExistingDirectory(self, "Select Folder")  # TO BE FIXED
 
         if path:
             self.file_list.clear()
@@ -246,12 +265,6 @@ class AudioApp(QWidget):
                     self.playlist.append(full_path)
                     self.file_list.addItem(filename)
 
-        else:
-            file, _ = QFileDialog.getOpenFileName(self, "Select File", filter="Audio Files (*.mp3)")
-            if file:
-                self.file_list.clear()
-                self.playlist = [file]
-                self.file_list.addItem(os.path.basename(file))
 
     def play_audio(self):
         self.progress_bar.setEnabled(True)
@@ -609,8 +622,10 @@ class AudioApp(QWidget):
             if song_to_remove in self.playlist:
                 self.playlist.remove(song_to_remove)
 
+
         # remove from QlistWidget
         self.file_list.takeItem(self.file_list.row(selected_item[0]))
+
 
     def clear_playlist(self):
 
