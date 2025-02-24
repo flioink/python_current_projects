@@ -25,6 +25,7 @@ class WeatherApp(QWidget):
     def __init__(self):
         super().__init__()
         self.kelvin_scale = 273.15
+        self.combo_selection = ""
         self.load_icons()
         self.city_label = QLabel("Enter city name: ", self)
         self.city_input = QLineEdit(self)
@@ -59,8 +60,10 @@ class WeatherApp(QWidget):
         self.favorites_layout = QHBoxLayout()
         self.favorites_combo_box = QComboBox()
         self.add_button = QPushButton("Add")
-        self.favorites_layout.addWidget(self.add_button)
-        self.favorites_layout.addWidget(self.favorites_combo_box)
+
+        self.favorites_layout.addWidget(self.favorites_combo_box, 1)
+        self.favorites_layout.addWidget(self.add_button, 1)
+
 
         # set default location button layout
         self.set_default_button_layout = QVBoxLayout()
@@ -202,10 +205,12 @@ class WeatherApp(QWidget):
 
 
     def clear(self):
+        self.description_label.clear()
         self.city_input.clear()
         self.temperature_label.clear()
         self.icon_label.clear()
-        self.description_label.clear()
+        self.icon_label.setFixedSize(256, 256)  # Adjust as needed
+        self.temperature_label.setMinimumHeight(75)  # Prevents it from shrinking too much
         self.feels_like.clear()
         self.wind_speed.clear()
 
@@ -359,16 +364,17 @@ class WeatherApp(QWidget):
                 cities = json.load(file)
 
                 # Store city names in a list
-                self.city_names = [f"{city['name']}, {city['country']}" for city in cities]
+                self.city_name_and_country = [f"{city['name']}, {city['country']}" for city in cities]
+                self.city_names_only = [f"{city['name']}" for city in cities]
 
                 # Debug: Check if the list has data
                 # print("Loaded cities:", len(city_names))
 
-                if not self.city_names:
+                if not self.city_name_and_country:
                     print("Warning: No cities loaded for autocomplete.")
                     return  # Avoid setting an empty model
 
-                self.completer_setup(self.city_names)
+                self.completer_setup(self.city_name_and_country)
 
         except Exception as e:
             print(f"Error loading cities: {e}")
@@ -398,7 +404,11 @@ class WeatherApp(QWidget):
         return like
 
     def add_to_favorites(self):
-        city_to_add = self.get_input_text()
+        city_to_add = self.get_input_text().strip()
+
+        if not city_to_add in self.city_names_only:
+            print(f"City {city_to_add} not found")
+            return
 
         try:
             with open("favorites.json", "r") as in_file:
@@ -413,12 +423,14 @@ class WeatherApp(QWidget):
         # check for duplications
         if city_to_add not in current_favorites["favorites"]:
             current_favorites["favorites"].append(city_to_add)
+            self.favorites_combo_box.addItem(city_to_add)
+
+            # Set the selection to the newly added item
+            self.favorites_combo_box.setCurrentIndex(self.favorites_combo_box.count() - 1)
 
         with open("favorites.json", "w") as out_file:
             json.dump(current_favorites, out_file, indent=4)
 
-        self.load_favorites()
-        self.city_input.setText(city_to_add)
 
     def load_favorites(self):
         try:
@@ -434,8 +446,10 @@ class WeatherApp(QWidget):
             self.favorites_combo_box.addItem(item)
 
     def load_selected_favorite(self):
-        selected_city = self.favorites_combo_box.currentText()
-        self.city_input.setText(selected_city)
+        self.combo_selection = self.favorites_combo_box.currentText()
+        print(self.combo_selection)
+        self.city_input.setText(self.combo_selection)
+        self.api_call(self.combo_selection)
 
     @staticmethod
     def get_weather_descriptions(data):
