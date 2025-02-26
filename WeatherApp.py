@@ -1,8 +1,7 @@
 import json
 import os
 import sys
-
-
+from math import floor
 import requests
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, \
@@ -307,13 +306,14 @@ class WeatherApp(QWidget):
         weather_id, weather_desc = self.get_weather_descriptions(data)
         # get feels like temp
         feels_like = self.get_feels_like(data)
+
         # get wind speed
         wind_speed = self.get_wind_speed(data)
 
         # set labels
         self.temperature_label.setText(f"{current_temp:.0f}°C")
         self.wind_speed.setText(f"Wind speed: {wind_speed:.0f} m/s")
-        self.feels_like.setText(f"Feels like: {feels_like:.0f}°C")
+        self.feels_like.setText(f"Feels like: {feels_like}°C")
         self.description_label.setText(weather_desc)
         self.icon_label.setText(self.set_weather_image(weather_id))
 
@@ -399,7 +399,8 @@ class WeatherApp(QWidget):
     def get_feels_like(self, data):
         temp_k = data["main"]["temp"]
         # feels like temp
-        like = data["main"].get("feels_like", temp_k) - self.kelvin_scale
+        like = floor(data["main"].get("feels_like", temp_k) - self.kelvin_scale)
+
         print(like)
         return like
 
